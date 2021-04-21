@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<hdevelop file_version="1.2" halcon_version="20.11.1.2">
+<procedure name="main">
+<interface/>
+<body>
+<c>* This example demonstrates the use of the optical flow for</c>
+<c>* the detection of moving objects in an image sequence.</c>
+<c>* The region of interest is analyzed to detect moving objects.</c>
+<c>* If a moving object is detected, the exit gate is opened automatically.</c>
+<c>* </c>
+<c>* Initialize output window</c>
+<l>dev_update_off ()</l>
+<l>read_image (Image1, 'C:/Users/Jai/Desktop/halcon/sample1/frame_0.jpg')</l>
+<l>ZoomFactor := 0.5</l>
+<l>zoom_image_factor (Image1, Image1, ZoomFactor, ZoomFactor, 'constant')</l>
+<l>dev_close_window ()</l>
+<l>dev_open_window_fit_image (Image1, 0, 0, -1, -1, WindowHandle)</l>
+<l>dev_set_draw ('margin')</l>
+<c>* </c>
+<c>* Generate ROI</c>
+<l>gen_contour_polygon_xld (ROI, [0,0,540,540,0] * ZoomFactor, [0,960,960,0,0] * ZoomFactor)</l>
+<l>gen_region_contour_xld (ROI, RegionROI, 'filled')</l>
+<l>reduce_domain (Image1, RegionROI, Image1ROI)</l>
+<c>* </c>
+<c>* Main loop: Calculate optical flow and display moving area</c>
+<c>* </c>
+<l>for I := 2 to 635 by 1</l>
+<l>    read_image (Image2, 'C:/Users/Jai/Desktop/halcon/sample1/frame_' + I)</l>
+<c>    * </c>
+<c>    * Zoom images to speed-up calculation of optical flow</c>
+<l>    zoom_image_factor (Image2, Image2, ZoomFactor, ZoomFactor, 'constant')</l>
+<l>    reduce_domain (Image2, RegionROI, Image2ROI)</l>
+<c>    * </c>
+<l>    optical_flow_mg (Image1ROI, Image2ROI, VectorField, 'fdrig', 0.8, 1, 10, 5, ['default_parameters','warp_zoom_factor'], ['fast',0.8])</l>
+<l>    vector_field_length (VectorField, LengthImage, 'squared_length')</l>
+<c>    * </c>
+<c>    * Segment regions with moving objects in the defined ROI</c>
+<l>    min_max_gray (RegionROI, LengthImage, 0.1, Min, Max, Range)</l>
+<l>    dev_display (Image2)</l>
+<l>    if (Max &gt; 2)</l>
+<l>        threshold (LengthImage, RegionMovement, 2.5, Max)</l>
+<l>        connection (RegionMovement, ConnectedRegions)</l>
+<l>        count_obj (ConnectedRegions, Number)</l>
+<l>        for Z := 1 to Number by 1</l>
+<c>            * Select largest moving region</c>
+<l>            select_obj (ConnectedRegions, RegionMovement, Z)</l>
+<c>            *select_shape_std (ConnectedRegions, RegionMovement, Z)</c>
+<l>            area_center (RegionMovement, Area, RCenterNew, CCenterNew)</l>
+<l>*             if (Area &gt; 0)</l>
+<l>                shape_trans (RegionMovement, ConvexHullregion, 'convex')</l>
+<l>                intersection (RegionROI, ConvexHullregion, RegionMovementInROI)</l>
+<l>                reduce_domain (VectorField, ConvexHullregion, VectorReduced)</l>
+<l>                vector_field_to_real (VectorReduced, Row, Column)</l>
+<c>                * </c>
+<c>                * Estimate the movement direction and the speed</c>
+<l>                intensity (RegionMovementInROI, Row, MeanRow, Deviation)</l>
+<l>                intensity (RegionMovementInROI, Column, MeanColumn, Deviation1)</l>
+<c>                * </c>
+<c>                * Display results</c>
+<l>                dev_set_line_width (1)</l>
+<l>                dev_set_color ('yellow')</l>
+<l>                dev_display (VectorReduced)</l>
+<c>                * Display region of interest</c>
+<l>                dev_set_line_width (3)</l>
+<l>                dev_set_color ('magenta')</l>
+<l>                dev_display (RegionROI)</l>
+<c>                * Display region of moving object in the region of interest</c>
+<l>                dev_set_color ('green')</l>
+<l>                dev_display (RegionMovementInROI)</l>
+<l>                gen_arrow_contour_xld (Arrow, RCenterNew, CCenterNew, RCenterNew + MeanRow, CCenterNew + MeanColumn, 10, 10)</l>
+<l>                dev_display (Arrow)</l>
+<l>*             endif</l>
+<l>        endfor</l>
+<l>    endif</l>
+<c>    * </c>
+<l>    *dump_window_image (Image3, WindowHandle)</l>
+<l>    *write_image (Image3, 'jpeg 100', 0, 'C:/Users/Jai/Desktop/halcon/output1/output_'+ (I-2))</l>
+<l>    copy_obj (Image2ROI, Image1ROI, 1, 1)</l>
+<l>endfor</l>
+</body>
+<docu id="main">
+<parameters/>
+</docu>
+</procedure>
+</hdevelop>
